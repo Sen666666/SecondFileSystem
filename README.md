@@ -1,4 +1,9 @@
 # SecondFileSystem
+同济大学操作系统课设，详细报告可参考文档。
+
+
+
+
 操作系统课程设计，基于UNIX V6++设计的二级文件系统
 程序设计环境：
 运行平台：@RHEL74-X64
@@ -21,8 +26,8 @@
 	Openfilemanager.h中主要定义了myOpenFIleTable，myInodeTable两个类
 	User.h中主要定义了myUser类
 
-	对应的cpp文件是对应头文件的类的实现，而demo.cpp中实现了磁盘的格式化，系统的初始化，和文件操作的API。
-	最后make出的可执行文件名为myos
+对应的cpp文件是对应头文件的类的实现，而demo.cpp中实现了磁盘的格式化，系统的初始化，和文件操作的API。
+最后make出的可执行文件名为myos
 	
 执行说明：
 	直接将所有文件放入一个文件夹下，执行 make 指令make出可执行文件myos，run ./myos 即可进入文件系统，进入用户界面之后会有更加详细的使用说明，根据提示一步步输入即可，
