@@ -160,7 +160,7 @@ void myInode::WriteI()
 		/* 需要读字节数为零，则返回 */
 		return;
 	}
-	//cout << "需要写入的字节数为  u.u_IOParam.m_Count=" << u.u_IOParam.m_Count << endl;
+//	cout << "需要写入的字节数为  u.u_IOParam.m_Count=" << u.u_IOParam.m_Count << endl;
 	while (myUser::my_NOERROR == u.u_error && u.u_IOParam.m_Count != 0)
 	{
 		lbn = u.u_IOParam.m_Offset / myInode::BLOCK_SIZE;

@@ -785,7 +785,7 @@ void myFileManager::Rdwr(enum myFile::FileFlags mode)
 /* 返回NULL表示目录搜索失败，否则是根指针，指向文件的内存打开i节点 ，上锁的内存i节点  */
 myInode* myFileManager::NameI(char(*func)(), enum DirectorySearchMode mode)
 {
-//	cout << "FileManager.NameI" << endl;
+	//cout << "FileManager.NameI" << endl;
 	//注：这里的func必为nextchar
 	myInode* pInode;
 	myBuf* pBuf;
@@ -804,7 +804,7 @@ myInode* myFileManager::NameI(char(*func)(), enum DirectorySearchMode mode)
 	if ('/' == (curchar = (*func)()))
 	{
 		pInode = this->rootDirInode;
-	//	cout << "pInode被设置为根目录,它所对应的目录文件所在的盘块号为 <rootDirInode->i_addr[0]=" <<rootDirInode->i_addr[0]<< endl;
+//		cout << "pInode被设置为根目录,它所对应的目录文件所在的盘块号为 <rootDirInode->i_addr[0]=" <<rootDirInode->i_addr[0]<< endl;
 	}
 
 	/* 检查该Inode是否正在被使用，以及保证在整个目录搜索过程中该Inode不被释放 */
@@ -819,6 +819,7 @@ myInode* myFileManager::NameI(char(*func)(), enum DirectorySearchMode mode)
 	//注：那应该如何删除目录呢？
 	if ('\0' == curchar && mode != myFileManager::OPEN)
 	{
+//		cout << "试图更改和删除当前目录文件则出错" << endl;
 		u.u_error = myUser::my_ENOENT;
 		goto out;
 	}
@@ -830,7 +831,7 @@ myInode* myFileManager::NameI(char(*func)(), enum DirectorySearchMode mode)
 		/* 如果出错则释放当前搜索到的目录文件Inode，并退出 */
 		if (u.u_error != myUser::my_NOERROR)
 		{
-			cout << "NameI检测到u.u_error有错，将错误返回" << endl;
+//			cout << "NameI检测到u.u_error有错，将错误返回" << endl;
 			break;	/* goto out; */
 		}
 
@@ -1051,7 +1052,7 @@ char myFileManager::NextChar()
 */
 myInode* myFileManager::MakNode(unsigned int mode)
 {
-//	cout << "FIleManager.MakNode" << endl;
+	//cout << "FIleManager.MakNode" << endl;
 	myInode* pInode;
 	myUser& u = myKernel::Instance().GetUser();
 
@@ -1075,7 +1076,7 @@ myInode* myFileManager::MakNode(unsigned int mode)
 
 void myFileManager::WriteDir(myInode* pInode)
 {
-//	cout << "FileManager.WriteDir" << endl;
+	//cout << "FileManager.WriteDir" << endl;
 	myUser& u = myKernel::Instance().GetUser();
 
 	/* 设置目录项中Inode编号部分 */
@@ -1115,6 +1116,7 @@ void myFileManager::SetCurDir(char* pathname)
 	}
 	else	/* 如果是从根目录'/'开始，则取代原有工作目录 */
 	{
+	//	cout << "将成功fanhui" << endl;
 		strcpy(u.u_curdir, pathname);
 		//Utility::StringCopy(pathname, u.u_curdir);
 	}
@@ -1171,17 +1173,20 @@ void myFileManager::ChDir()
 	pInode = this->NameI(myFileManager::NextChar, myFileManager::OPEN);
 	if (NULL == pInode)
 	{
+		cout << "啥都没找到" << endl;
 		return;
 	}
 	/* 搜索到的文件不是目录文件 */
 	if ((pInode->i_mode & myInode::IFMT) != myInode::IFDIR)
 	{
+		cout << "搜索到的不是目录文件,chdir错误返回" << endl;
 		u.u_error = myUser::my_ENOTDIR;
 		this->m_InodeTable->IPut(pInode);
 		return;
 	}
 	if (this->Access(pInode, myInode::IEXEC))
 	{
+		cout << "无权限返回" << endl;
 		this->m_InodeTable->IPut(pInode);
 		return;
 	}
@@ -1238,4 +1243,49 @@ void myFileManager::UnLink()
 	this->m_InodeTable->IPut(pDeleteInode);
 	this->m_InodeTable->IPut(pInode);
 //	cout << "unLink成功返回" << endl;
+}
+
+
+
+void myFileManager::MkNod()
+{
+	//cout << "fileManager.MkNod" << endl;
+	myInode* pInode;
+	myUser& u = myKernel::Instance().GetUser();
+
+	/* 检查uid是否是root，该系统调用只有uid==root时才可被调用 */
+	if (true)
+	{
+		pInode = this->NameI(myFileManager::NextChar, myFileManager::CREATE);
+		/* 要创建的文件已经存在,这里并不能去覆盖此文件 */
+		if (pInode != NULL)
+		{
+			cout << "创建的文件已存在" << endl;
+			u.u_error = myUser::my_EEXIST;
+			this->m_InodeTable->IPut(pInode);
+			return;
+		}
+	}
+	else
+	{
+		/* 非root用户执行mknod()系统调用返回User::EPERM */
+		u.u_error = myUser::my_EPERM;
+		return;
+	}
+	/* 没有通过SUser()的检查 */
+	if (myUser::my_NOERROR != u.u_error)
+	{
+		return;	/* 没有需要释放的资源，直接退出 */
+	}
+	pInode = this->MakNode(u.u_arg[1]);
+	if (NULL == pInode)
+	{
+		return;
+	}
+	/* 所建立是设备文件 */
+	if ((pInode->i_mode & (myInode::IFBLK | myInode::IFCHR)) != 0)
+	{
+		pInode->i_addr[0] = u.u_arg[2];
+	}
+	this->m_InodeTable->IPut(pInode);
 }

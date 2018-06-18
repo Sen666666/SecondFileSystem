@@ -46,7 +46,6 @@ public:
 	int		s_time;			/* 最近一次更新时间 */
 	int		padding[49];	/* 填充使SuperBlock块大小等于1024字节，占据2个扇区 */
 
-	//int initialize();
 };
 
 
@@ -129,6 +128,8 @@ public:
 	* @comment 释放存储设备dev上编号为blkno的磁盘块
 	*/
 	void Free( int blkno);
+
+
 
 
 private:
@@ -277,7 +278,8 @@ public:
 	/* 取消文件 */
 	void UnLink();
 
-
+	/*创建目录*/
+	void MkNod();
 public:
 	/* 根目录内存Inode */
 	myInode* rootDirInode;
