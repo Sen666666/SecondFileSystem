@@ -130,6 +130,7 @@ int fcreate(char *filename,int mode)
 {
 //	printf("\n\n\n--->fcreate ");
 	myUser &u = myKernel::Instance().GetUser();
+	u.u_error = myUser::my_NOERROR;
 	u.u_ar0 = 0;
 	u.u_dirp = filename;
 	u.u_arg[1] = myInode::IRWXU;
@@ -146,6 +147,7 @@ int fopen(char *pathname,int mode)
 {
 //	cout << "\n\n\n--->fopen" << endl;
 	myUser &u = myKernel::Instance().GetUser();
+	u.u_error = myUser::my_NOERROR;
 	u.u_ar0 = 0;
 	u.u_dirp = pathname;
 	u.u_arg[1] = mode;
@@ -160,6 +162,7 @@ int fwrite(int fd,char *src,int len)
 {
 //	cout << "\n\n\n--->fwrite" << endl;
 	myUser &u = myKernel::Instance().GetUser();
+	u.u_error = myUser::my_NOERROR;
 	u.u_ar0 = 0;
 	u.u_arg[0] = fd;
 	u.u_arg[1] = int(src);
@@ -176,6 +179,7 @@ int fread(int fd,char *des,int len)
 {
 //	cout << "\n\n\n--->fread" << endl;
 	myUser &u = myKernel::Instance().GetUser();
+	u.u_error = myUser::my_NOERROR;
 	u.u_ar0 = 0;
 	u.u_arg[0] = fd;
 	u.u_arg[1] = int(des);
@@ -190,6 +194,7 @@ void fdelete(char* name)
 {
 //	cout << "\n\n\n--->fdelete" << endl;
 	myUser &u = myKernel::Instance().GetUser();
+	u.u_error = myUser::my_NOERROR;
 	u.u_ar0 = 0;
 	u.u_dirp = name;
 	myFileManager &fimanag = myKernel::Instance().GetFileManager();
@@ -201,6 +206,7 @@ int flseek(int fd,int position,int ptrname)
 {
 //	cout << "\n\n\n--->fseek" << endl;
 	myUser &u = myKernel::Instance().GetUser();
+	u.u_error = myUser::my_NOERROR;
 	u.u_ar0 = 0;
 	u.u_arg[0] = fd;
 	u.u_arg[1] = position;
@@ -215,6 +221,7 @@ void fclose(int fd)
 {
 //	cout << endl << endl << endl << "--->fclose" << endl;
 	myUser &u = myKernel::Instance().GetUser();
+	u.u_error = myUser::my_NOERROR;
 	u.u_ar0 = 0;
 	myFileManager &fimanag = myKernel::Instance().GetFileManager();
 	u.u_arg[0] = fd;
@@ -226,14 +233,12 @@ void fclose(int fd)
 void ls()
 {
 	myUser &u = myKernel::Instance().GetUser();
-//	strcpy(u.u_dirp, u.u_curdir);
-//	u.u_arg[1] = (myFile::FREAD) | (myFile::FWRITE);
+	u.u_error = myUser::my_NOERROR;
 	int fd = fopen(u.u_curdir, (myFile::FREAD) );
 	char temp_filename[32] = { 0 };
 	for (;;)
 	{
 		if (fread(fd, temp_filename, 32) == 0) {
-	//		cout << "ls成功返回" << endl;
 			return;
 		}
 		else
@@ -241,12 +246,76 @@ void ls()
 			//for (int i = 0; i < 32; i++)
 			//	cout << temp_filename[i] << "  " << int(temp_filename) << endl;
 			myDirectoryEntry *mm = (myDirectoryEntry*)temp_filename;
+			if (mm->m_ino == 0)
+				continue;
 			cout << "======" << mm->m_name << "======" << endl;
 			memset(temp_filename, 0, 32);
 		}
 	}
-	
+	fclose(fd);
 }
+
+
+void mkdir(char *dirname)
+{
+//	cout << "mkdir" << endl;
+	int defaultmode = 040755;
+	myUser &u = myKernel::Instance().GetUser();
+	u.u_error = myUser::my_NOERROR;
+	u.u_dirp = dirname;
+	u.u_arg[1] = defaultmode;
+	u.u_arg[2] = 0;
+	myFileManager &fimanag = myKernel::Instance().GetFileManager();
+	fimanag.MkNod();
+
+}
+
+void cd(char *dirname)
+{
+//	cout << "cd" << endl;
+	myUser &u = myKernel::Instance().GetUser();
+	u.u_error = myUser::my_NOERROR;
+	char ppp[10] = { 0 };
+	strcpy(ppp, "testdir");
+	u.u_dirp = ppp;
+	u.u_arg[0] = int(ppp);
+	myFileManager &fimanag = myKernel::Instance().GetFileManager();
+	fimanag.ChDir();
+
+}
+
+void backDir(){
+
+	cout << "backDir" <<"  "<< endl;
+	char temp_curdir[128] = { 0 };
+	myUser &u = myKernel::Instance().GetUser();
+//	cout << u.u_curdir << endl;
+	u.u_error = myUser::my_NOERROR;
+	char *last=strrchr(u.u_curdir, '/');
+	if (last == u.u_curdir&&u.u_curdir[1]==0)
+	{
+		cout << "此为根目录,无效返回" << endl;
+		return;
+	}
+	else if (last == u.u_curdir)
+	{
+		cout << "将返回根目录" << endl;
+		temp_curdir[0] = '/';
+	}
+	else {
+		int i = 0;
+		for (char *pc = u.u_curdir; pc != last; pc++)
+		{
+			temp_curdir[i++] = u.u_curdir[i++];
+		}
+	}
+	cout << temp_curdir << endl;
+	u.u_dirp = temp_curdir;
+	u.u_arg[0] = int(temp_curdir);
+	myFileManager &fimanag = myKernel::Instance().GetFileManager();
+	fimanag.ChDir();
+}
+
 void quitOS(char *addr,int len)
 {
 	myBufferManager &bm = myKernel::Instance().GetBufferManager();
@@ -287,6 +356,19 @@ int main()
 	sys_init();
 
 
+/* fcreate("test0", 1);
+	ls();
+	mkdir("testdir");
+	cout << endl << endl << endl;
+	ls();
+	cd("testdir");
+	int fc=fcreate("test1", 1);
+	ls();
+	backDir();
+	ls();
+	exit(1);
+	*/
+
 
 	cout << "                    类UNIX V6++二级文件系统实验                     " << endl;
 	cout << "                             *******                                " << endl;
@@ -298,20 +380,24 @@ int main()
 		char WhichToDo=-1;
 		cout << "===============================================================" << endl;
 		cout << "||请输入需要执行的API的对应编号，如下所示：                  ||" << endl;
-		cout << "||1   fopen(char *name, int mode)                            ||" << endl;
-		cout << "||2   fclose(int fd)                                         ||" << endl;
-		cout << "||3   fread(int fd, int length)                              ||" << endl;
-		cout << "||4   fwrite(int fd, char *buffer, int length)               ||" << endl;
-		cout << "||5   flseek(int fd, int position, int ptrname)              ||" << endl;
-		cout << "||6   fcreat(char *name, int mode)                           ||" << endl;
-		cout << "||7   fdelete(char *name)                                    ||" << endl;
-		cout << "||8   ls()                                                   ||" << endl;
+		cout << "||a   fopen(char *name, int mode)                            ||" << endl;
+		cout << "||b   fclose(int fd)                                         ||" << endl;
+		cout << "||c   fread(int fd, int length)                              ||" << endl;
+		cout << "||d   fwrite(int fd, char *buffer, int length)               ||" << endl;
+		cout << "||e   flseek(int fd, int position, int ptrname)              ||" << endl;
+		cout << "||f   fcreat(char *name, int mode)                           ||" << endl;
+		cout << "||g   fdelete(char *name)                                    ||" << endl;
+		cout << "||h   ls()                                                   ||" << endl;
+		cout << "||i   mkdir(char* dirname)                                   ||" << endl;
+		cout << "||j   cd(char* dirname)                                      ||" << endl;
+		cout << "||k   backDir()--返回上级目录                                ||" << endl;
 		cout << "||q  退出文件系统                                            ||" << endl << endl << endl;
 		//cout << "===============================================================" << endl;
 		cout << "||SecondFileSystem@ 请输入编号>>";
 		cin >> WhichToDo;
 		string filename;
 		string inBuf;
+		string dirname;
 		int temp_fd; 
 		int outSeek;
 		int inLen;
@@ -324,10 +410,10 @@ int main()
 		int creatfd;
 		int writeNum = 0;
 		char c;
-		char *temp_inBuf, *temp_des, *temp_filename;
+		char *temp_inBuf, *temp_des, *temp_filename,*temp_dirname;
 		switch (WhichToDo)
 		{
-		case '1'://fopen
+		case 'a'://fopen
 			cout << "||SecondFileSystem@ 请输入第一个参数文件名>>";
 			cin >> filename;
 			temp_filename = new char[filename.length()+1];
@@ -341,12 +427,12 @@ int main()
 				cout << "||SecondFileSystem@ open 返回fd=" << openfd << endl;
 			delete temp_filename;
 			break;
-		case '2'://fclose
+		case 'b'://fclose
 			cout << "||SecondFileSystem@ 请输入第一个参数文件句柄>>";
 			cin >> temp_fd;
 			fclose(temp_fd);
 			break;
-		case '3'://fread
+		case 'c'://fread
 			cout << "||SecondFileSystem@ 请输入第一个参数，文件句柄>>";
 			cin >> temp_fd;
 			cout << "||SecondFileSystem@ 请输入第二个参数，读出的数据长度:";
@@ -358,7 +444,7 @@ int main()
 			cout << "||SecondFileSystem@ 读出数据为:" << endl;
 			cout << temp_des << endl;
 			break;
-		case '4'://fwrite
+		case 'd'://fwrite
 			cout << "||SecondFileSystem@ 请输入第一个参数文件句柄>>";
 			cin >> temp_fd;
 			cout << "||SecondFileSystem@ 请输入第二个参数，写入数据>>";
@@ -370,7 +456,7 @@ int main()
 			writeNum = fwrite(temp_fd, temp_inBuf, inLen);
 			cout << "||SecondFileSystem@ 写返回为" << writeNum << endl;
 			break;
-		case '5'://flseek
+		case 'e'://flseek
 			cout << "||SecondFileSystem@ 请输入第一个参数文件句柄>>";
 			cin >> temp_fd;
 			cout << "||SecondFileSystem@ 请输入第二个参数，移动位置>>";
@@ -380,7 +466,7 @@ int main()
 			outSeek = flseek(temp_fd, temp_position, temp_ptrname);
 			cout << "||SecondFileSystem@ fseek函数返回" << outSeek << endl;
 			break;
-		case '6'://fcreat
+		case 'f'://fcreat
 			cout << "||SecondFileSystem@ 请输入第一个参数文件名>>";
 			cin >> filename;
 			temp_filename = new char[filename.length() + 1];
@@ -394,7 +480,7 @@ int main()
 				cout << "create成功 返回fd=" << creatfd << endl;
 			delete temp_filename;
 			break;
-		case '7'://fdelete
+		case 'g'://fdelete
 			cout << "||SecondFileSystem@ 请输入第一个参数文件名>>";
 			cin >> filename;
 			temp_filename = new char[filename.length() + 1];
@@ -402,11 +488,29 @@ int main()
 			fdelete(temp_filename);
 			delete temp_filename;
 			break;
-		case '8':
+		case 'h':
 			cout << "||SecondFileSystem@ 输出如下>>" << endl;
 			ls();
 			break;
-
+		case 'i'://mkdir
+			cout << "||SecondFileSystem@ 请输入第一个创建目录名>>";
+			cin >> dirname;
+			temp_dirname = new char[dirname.length() + 1];
+			strcpy(temp_dirname, dirname.c_str());
+			mkdir(temp_dirname);
+			delete temp_dirname;
+			break;
+		case 'j'://cd
+			cout << "||SecondFileSystem@ 请输入第一个进入目录名>>";
+			cin >> dirname;
+			temp_dirname = new char[dirname.length() + 1];
+			strcpy(temp_dirname, dirname.c_str());
+			cd(temp_dirname);
+			delete temp_dirname;
+			break;
+		case 'k':
+			backDir();
+			break;
 		case 'q':
 			quitOS((char*)addr,len);
 			return 1;
@@ -420,16 +524,4 @@ int main()
 
 
 
-	/*
-	char tempBuf[32] = { 0 };
-	int ffd=fcreate("text.txt",myInode::IRWXU);
-	fwrite(ffd,"hello,world",12);
-	int fffd = fopen("text.txt", (myFile::FREAD) | (myFile::FWRITE));
-	fseek(fffd,6,0);
-	fread(fffd,tempBuf,5);
-	cout << tempBuf << endl;
-	ls();
-	fdelete("text.txt");
-	fopen("text.txt", (myFile::FREAD) | (myFile::FWRITE));
-	*/
 }
